@@ -522,7 +522,7 @@ S.ShapeBuilder = (function () {
   //   gap = 8;
   // }
   if ((window.innerWidth>500 && window.innerHeight>500)){
-    gap = 8;
+    gap = 13;
   }
 
   var shapeCanvas = document.createElement('canvas'),
