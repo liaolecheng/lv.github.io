@@ -14,28 +14,48 @@
 
 
 var S = {
-  init: function () {
-    var action = window.location.href,
-        i = action.indexOf('?a=');
+  init: function (start) {
+    if (start != 0){
+      var action = window.location.href,
+          i = action.indexOf('?a=');
 
-    S.Drawing.init('.canvas');
-    document.body.classList.add('body--ready');
+      S.Drawing.init('.canvas', start);
+      document.body.classList.add('body--ready');
 
-    if (i !== -1) {
-      S.UI.simulate(decodeURI(action).substring(i + 3));
-    } else {
-      S.UI.simulate('|#countdown 3||某|某|祝|你|生|日|快|乐|#rectangle|');
+      if (i !== -1) {
+        S.UI.simulate(decodeURI(action).substring(i + 3));
+      } else {
+        S.UI.simulate('|#icon heart');
+      }
+
+      S.Drawing.loop(function () {
+        S.Shape.render();
+      });
+    }else{
+      var action = window.location.href,
+          i = action.indexOf('?a=');
+
+      S.Drawing.init('.canvas', start);
+      document.body.classList.add('body--ready');
+
+      if (i !== -1) {
+        S.UI.simulate(decodeURI(action).substring(i + 3));
+      } else {
+        S.UI.simulate('|#countdown 3||祝|XXX|生日快乐|祝你|生日快乐|祝你幸福|祝你健康|前途光明|祝你|生日快乐！|#icon heart|#icon heart-empty|#icon heart');
+      }
+
+      S.Drawing.loop(function () {
+        S.Shape.render();
+      });
     }
 
-    S.Drawing.loop(function () {
-      S.Shape.render();
-    });
   }
 };
 
 
 S.Drawing = (function () {
-  var canvas,
+  var start,
+      canvas,
       context,
       renderFn
       requestFrame = window.requestAnimationFrame       ||
@@ -48,7 +68,8 @@ S.Drawing = (function () {
                      };
 
   return {
-    init: function (el) {
+    init: function (el, s) {
+      start = s;
       canvas = document.querySelector(el);
       context = canvas.getContext('2d');
       this.adjustCanvas();
@@ -84,12 +105,19 @@ S.Drawing = (function () {
       context.arc(p.x, p.y, p.z, 0, 2 * Math.PI, true);
       context.closePath();
       context.fill();
+    },
+
+    getStatus: function (){
+      return start;
     }
   }
 }());
 
 
 S.UI = (function () {
+  var delay1,delay2;
+  delay1 = 3000;
+  delay2 = 5000;
   var canvas = document.querySelector('.canvas'),
       interval,
       isTouch = false, //('ontouchstart' in window || navigator.msMaxTouchPoints),
@@ -141,11 +169,14 @@ S.UI = (function () {
     destroy && S.Shape.switchShape(S.ShapeBuilder.letter(''));
   }
 
-  function performAction(value) {
+  function performAction(value, start) {
     var action,
         value,
         current;
-
+    if (window.innerWidth>500 && window.innerHeight>500){
+      delay1 = 1000;
+      delay2 = 2000;
+    }
     // overlay.classList.remove('overlay--visible');
     sequence = typeof(value) === 'object' ? value : sequence.concat(value.split('|'));
     // input.value = '';
@@ -171,7 +202,7 @@ S.UI = (function () {
             } else {
               S.Shape.switchShape(S.ShapeBuilder.letter(index), true);
             }
-          }, 1000, value, true);
+          }, delay1, value, true);
           break;
 
         case 'rectangle':
@@ -199,14 +230,20 @@ S.UI = (function () {
                 time = t;
                 S.Shape.switchShape(S.ShapeBuilder.letter(time));
               }
-            }, 1000);
+            }, delay1);
           }
+          break;
+
+        case 'icon':
+          S.ShapeBuilder.imageFile('font-awesome/' + value + '.png', function (obj) {
+            S.Shape.switchShape(obj);
+          });
           break;
 
         default:
           S.Shape.switchShape(S.ShapeBuilder.letter(current[0] === cmd ? 'What?' : current));
       }
-    }, 2000, sequence.length);
+    }, delay2, sequence.length);
   }
 
   function checkInputWidth(e) {
@@ -225,12 +262,12 @@ S.UI = (function () {
 
   function bindEvents() {
     document.body.addEventListener('keydown', function (e) {
-      input.focus();
+      // input.focus();
 
       if (e.keyCode === 13) {
         firstAction = false;
         reset();
-        performAction(input.value);
+        performAction(input.value, 0);
       }
     });
 
@@ -279,9 +316,9 @@ S.UI = (function () {
     //   }
     // });
 
-    canvas.addEventListener('click', function (e) {
-      overlay.classList.remove('overlay--visible');
-    });
+    // canvas.addEventListener('click', function (e) {
+    //   overlay.classList.remove('overlay--visible');
+    // });
   }
 
   function init() {
@@ -295,7 +332,7 @@ S.UI = (function () {
 
   return {
     simulate: function (action) {
-      performAction(action);
+      performAction(action, 1);
     }
   }
 }());
@@ -377,7 +414,7 @@ S.Dot = function (x, y) {
   this.e = 0.07;
   this.s = true;
 
-  this.c = new S.Color(255, 255, 255, this.p.a);
+  this.c = new S.Color(255, 192, 203, this.p.a);
 
   this.t = this.clone();
   this.q = [];
@@ -477,8 +514,18 @@ S.Dot.prototype = {
 
 
 S.ShapeBuilder = (function () {
-  var gap = 13,
-      shapeCanvas = document.createElement('canvas'),
+  var gap = 8,
+      start =  S.Drawing.getStatus();
+  // if (start !== '0'){
+  //   gap = 13;
+  // }else{
+  //   gap = 8;
+  // }
+  if ((window.innerWidth>500 && window.innerHeight>500)){
+    gap = 13;
+  }
+
+  var shapeCanvas = document.createElement('canvas'),
       shapeContext = shapeCanvas.getContext('2d'),
       fontSize = 500,
       fontFamily = 'Avenir, Helvetica Neue, Helvetica, Arial, sans-serif';
@@ -713,5 +760,7 @@ S.Shape = (function () {
   }
 }());
 
+function init(start){
+  S.init(start);
 
-S.init();
+}
